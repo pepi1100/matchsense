@@ -64,3 +64,55 @@ app.get("/api/summoners", (req, res) => {
   });
 });
 
+app.get("/generate", async (req, res) => {
+  const { summoner } = req.query;
+
+  if (!summoner) {
+    return res.status(400).json({ error: "Missing summoner param" });
+  }
+
+  try {
+    const summ = await getSummoner(summoner, "LAS");
+
+    const matchIds = await getMatchIdsByPUUID(summ.puuid, 10);
+
+    const mappedMatches = [];
+
+    for (const matchId of matchIds) {
+      const match = await getMatchDetails(matchId);
+
+      const player = match.info.participants.find(
+        (p) => p.puuid === summ.puuid
+      );
+
+      if (!player) continue;
+
+      mappedMatches.push({
+        champion: player.championName,
+        kills: player.kills,
+        deaths: player.deaths,
+        assists: player.assists,
+        win: player.win,
+      });
+    }
+
+    const analyzerInput = {
+      summoner: `${summ.gameName}#${summ.tagLine}`,
+      matches: mappedMatches,
+    };
+
+    const analysis = analyzeMatches(analyzerInput);
+
+    saveAnalysis(analysis);
+
+    res.json({
+      status: "ok",
+      summoner: analysis.summoner,
+      matches: analysis.totalMatches,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err.message);
+  }
+});
