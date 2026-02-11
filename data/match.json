@@ -1,0 +1,26 @@
+{
+  "summoner": "Pepito",
+  "matches": [
+    {
+      "champion": "Ahri",
+      "kills": 5,
+      "deaths": 2,
+      "assists": 7,
+      "win": true
+    },
+    {
+      "champion": "Ahri",
+      "kills": 3,
+      "deaths": 6,
+      "assists": 4,
+      "win": false
+    },
+    {
+      "champion": "Orianna",
+      "kills": 8,
+      "deaths": 3,
+      "assists": 6,
+      "win": true
+    }
+  ]
+}

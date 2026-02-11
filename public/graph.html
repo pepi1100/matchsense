@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Winrate Over Time</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        background: #0f172a;
+        color: white;
+      }
+      svg {
+        background: #020617;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Winrate Over Time</h2>
+    <label>
+      Summoner:
+      <select id="summonerSelect"></select>
+    </label>
+
+    <svg width="800" height="400"></svg>
+
+    <script>
+      const select = document.getElementById("summonerSelect");
+
+      fetch("/api/summoners")
+        .then((res) => res.json())
+        .then((summoners) => {
+          summoners.forEach((s) => {
+            const option = document.createElement("option");
+            option.value = s;
+            option.textContent = s;
+            select.appendChild(option);
+          });
+
+          loadChart(select.value);
+        });
+
+      select.addEventListener("change", () => {
+        loadChart(select.value);
+      });
+
+      function loadChart(summoner) {
+        d3.select("svg").selectAll("*").remove();
+
+        fetch(`/api/winrate?summoner=${encodeURIComponent(summoner)}`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (!data.length) return;
+
+            data.forEach((d) => {
+              d.day = new Date(d.day);
+              d.winrate = +d.winrate;
+            });
+
+            const svg = d3.select("svg");
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+            const width = +svg.attr("width") - margin.left - margin.right;
+            const height = +svg.attr("height") - margin.top - margin.bottom;
+
+            const g = svg
+              .append("g")
+              .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const oneDay = 24 * 60 * 60 * 1000;
+
+            const x = d3
+              .scaleTime()
+              .domain([
+                new Date(data[0].day.getTime() - oneDay),
+                new Date(data[0].day.getTime() + oneDay),
+              ])
+              .range([0, width]);
+
+            const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+            g.append("g")
+              .attr("transform", `translate(0,${height})`)
+              .call(d3.axisBottom(x));
+
+            g.append("g").call(d3.axisLeft(y));
+
+            const line = d3
+              .line()
+              .x((d) => x(d.day))
+              .y((d) => y(d.winrate));
+
+            g.append("path")
+              .datum(data)
+              .attr("fill", "none")
+              .attr("stroke", "#38bdf8")
+              .attr("stroke-width", 3)
+              .attr("d", line);
+            g.selectAll("circle")
+              .data(data)
+              .enter()
+              .append("circle")
+              .attr("cx", (d) => x(d.day))
+              .attr("cy", (d) => y(d.winrate))
+              .attr("r", 5)
+              .attr("fill", "#38bdf8");
+
+            g.selectAll("text.label")
+              .data(data)
+              .enter()
+              .append("text")
+              .attr("x", (d) => x(d.day))
+              .attr("y", (d) => y(d.winrate) - 10)
+              .attr("text-anchor", "middle")
+              .attr("fill", "white")
+              .attr("font-size", "12px")
+              .text((d) => `${d.winrate}%`);
+          });
+      }
+    </script>
+  </body>
+</html>
